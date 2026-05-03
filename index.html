@@ -1,215 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioCoat Pro</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+body { font-family: 'Cairo', sans-serif; }
+.tab-active { background:#10b981;color:white; }
+.tab-inactive { background:white;color:#64748b; }
+.gradient-green { background:linear-gradient(135deg,#065f46,#059669); }
+</style>
+</head>
+
+<body class="bg-slate-50">
+
+<header class="gradient-green text-white p-4 flex justify-between">
+    <h1>BioCoat Pro</h1>
+    <button id="langToggle" onclick="toggleLang()">English</button>
+</header>
+
+<main class="p-6 max-w-4xl mx-auto">
+
+<!-- INPUT -->
+<div id="inputOptions" class="grid gap-4">
+    <button onclick="openCamera()" class="p-4 bg-white rounded-xl shadow">Camera</button>
+
+    <label class="p-4 bg-white rounded-xl shadow cursor-pointer">
+        Upload Image
+        <input type="file" id="fileUpload" hidden>
+    </label>
+</div>
+
+<!-- PREVIEW -->
+<div id="previewContainer" class="hidden mt-6">
+    <img id="previewImg" class="w-full rounded-xl mb-4">
+    <button onclick="processImage()" class="p-4 bg-green-600 text-white rounded-xl w-full">
+        Analyze
+    </button>
+</div>
+
+<!-- RESULTS -->
+<div id="resultsContainer" class="hidden mt-6">
+
+<h2 id="resFruit"></h2>
+<p id="resShelfLife"></p>
+
+<div class="flex gap-2 mt-4">
+<button id="tabPrimary" onclick="switchPath('primary')" class="tab-active p-2 flex-1">Primary</button>
+<button id="tabAlternative" onclick="switchPath('alt')" class="tab-inactive p-2 flex-1">Alt</button>
+</div>
+
+<div id="resComponents" class="mt-4"></div>
+<div id="resSteps" class="mt-4"></div>
+<p id="resRationale" class="mt-4"></p>
+
+</div>
+
+</main>
+
+<div id="loader" class="hidden fixed inset-0 bg-black/60 text-white flex items-center justify-center">
+Loading...
+</div>
+
+<canvas id="cameraCanvas" class="hidden"></canvas>
+<video id="cameraVideo" class="hidden"></video>
+
 <script>
 const i18n = {
-    ar: {
-        title: "نظام مقارنة البدائل الحيوية",
-        subtitle: "حلل ثمارك واحصل على مسارين مختلفين للحفظ مع كامل التفاصيل لكل مادة.",
-        camBtn: "التحليل البصري",
-        uploadBtn: "رفع صورة العينة",
-        analyzeBtn: "توليد المسارين (أساسي + بديل)",
-        detected: "العينة المكتشفة",
-        shelfLife: "إطالة العمر الافتراضي",
-        componentsTitle: "المكونات والتركيزات الدقيقة",
-        stepsTitle: "بروتوكول التحضير الخاص",
-        devLabel: "المطور الرئيسي للنظام",
-        loading: "جاري مقارنة المسارات العلمية...",
-        days: "يوم إضافي"
-    },
-    en: {
-        title: "Bio-Alternative System",
-        subtitle: "Analyze your fruits and get two distinct preservation paths with full details.",
-        camBtn: "Visual Analysis",
-        uploadBtn: "Upload Sample",
-        analyzeBtn: "Generate Dual Paths (Primary + Alt)",
-        detected: "Detected Sample",
-        shelfLife: "Shelf Life Extension",
-        componentsTitle: "Ingredients & Exact Concentrations",
-        stepsTitle: "Specific Preparation Protocol",
-        devLabel: "Chief System Developer",
-        loading: "Comparing scientific paths...",
-        days: "Extra Days"
-    }
+ ar:{camBtn:"Camera"},
+ en:{camBtn:"Camera"}
 };
 
-let currentLang = "ar";
-let currentImg = null;
-let globalData = null;
-let activePath = "primary";
+let currentLang="ar";
+let currentImg=null;
+let globalData=null;
+let activePath="primary";
 
-/* ========== LANGUAGE ========== */
-function toggleLang() {
-    currentLang = currentLang === "ar" ? "en" : "ar";
-    document.documentElement.dir = currentLang === "ar" ? "rtl" : "ltr";
-
-    document.getElementById("langToggle").textContent =
-        currentLang === "ar" ? "English" : "عربي";
-
-    document.querySelectorAll("[data-i18n]").forEach(el => {
-        el.textContent = i18n[currentLang][el.getAttribute("data-i18n")];
-    });
-
-    if (globalData) renderContent();
+/* LANGUAGE */
+function toggleLang(){
+ currentLang=currentLang==="ar"?"en":"ar";
+ document.getElementById("langToggle").innerText=
+ currentLang==="ar"?"English":"عربي";
 }
 
-/* ========== CAMERA ========== */
-async function openCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-        });
-
-        document.getElementById("cameraVideo").srcObject = stream;
-        window.localStream = stream;
-
-        document.getElementById("inputOptions").classList.add("hidden");
-        document.getElementById("cameraContainer").classList.remove("hidden");
-
-    } catch (e) {
-        alert("Camera error");
-    }
+/* CAMERA */
+async function openCamera(){
+ try{
+ const stream=await navigator.mediaDevices.getUserMedia({video:true});
+ const v=document.getElementById("cameraVideo");
+ v.srcObject=stream;
+ v.play();
+ window.stream=stream;
+ alert("Camera opened (capture via hidden function)");
+ }catch(e){alert("camera error");}
 }
 
-/* ========== CAPTURE ========== */
-function capturePhoto() {
-    const video = document.getElementById("cameraVideo");
-    const canvas = document.getElementById("cameraCanvas");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    canvas.getContext("2d").drawImage(video, 0, 0);
-
-    const url = canvas.toDataURL("image/jpeg");
-    currentImg = url.split(",")[1];
-
-    document.getElementById("previewImg").src = url;
-
-    if (window.localStream) {
-        window.localStream.getTracks().forEach(t => t.stop());
-    }
-
-    document.getElementById("cameraContainer").classList.add("hidden");
-    document.getElementById("previewContainer").classList.remove("hidden");
-}
-
-/* ========== FILE UPLOAD ========== */
-document.getElementById("fileUpload").onchange = e => {
-    const reader = new FileReader();
-
-    reader.onload = ev => {
-        currentImg = ev.target.result.split(",")[1];
-        document.getElementById("previewImg").src = ev.target.result;
-
-        document.getElementById("inputOptions").classList.add("hidden");
-        document.getElementById("previewContainer").classList.remove("hidden");
-    };
-
-    reader.readAsDataURL(e.target.files[0]);
+/* FILE */
+document.getElementById("fileUpload").onchange=(e)=>{
+ const r=new FileReader();
+ r.onload=(ev)=>{
+ currentImg=ev.target.result.split(",")[1];
+ document.getElementById("previewImg").src=ev.target.result;
+ document.getElementById("inputOptions").classList.add("hidden");
+ document.getElementById("previewContainer").classList.remove("hidden");
+ };
+ r.readAsDataURL(e.target.files[0]);
 };
 
-/* ========== PROCESS IMAGE ========== */
-async function processImage() {
-    document.getElementById("loader").classList.remove("hidden");
+/* PROCESS */
+async function processImage(){
+ document.getElementById("loader").classList.remove("hidden");
 
-    const apiKey = ""; // حطي API KEY هنا
+ const apiKey="";
 
-    const prompt = `
-Identify fruit and return JSON with TWO coating formulas:
-Primary and Alternative.
-`;
+ const prompt="Return JSON with fruit + 2 coatings";
 
-    try {
-        const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            {
-                                inlineData: {
-                                    mimeType: "image/jpeg",
-                                    data: currentImg
-                                }
-                            }
-                        ]
-                    }]
-                })
-            }
-        );
+ try{
+ const resp=await fetch(
+ `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+ {
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({
+ contents:[{
+ parts:[
+ {text:prompt},
+ {inlineData:{mimeType:"image/jpeg",data:currentImg}}
+ ]
+ }]
+ })
+ }
+ );
 
-        const res = await resp.json();
-        globalData = JSON.parse(res.candidates[0].content.parts[0].text);
+ const res=await resp.json();
+ globalData=JSON.parse(res.candidates[0].content.parts[0].text);
 
-        activePath = "primary";
+ renderContent();
 
-        renderContent();
+ document.getElementById("previewContainer").classList.add("hidden");
+ document.getElementById("resultsContainer").classList.remove("hidden");
 
-        document.getElementById("previewContainer").classList.add("hidden");
-        document.getElementById("resultsContainer").classList.remove("hidden");
+ }catch(e){
+ alert("Error in analysis");
+ }
 
-    } catch (e) {
-        alert("Analysis error");
-    }
-
-    document.getElementById("loader").classList.add("hidden");
+ document.getElementById("loader").classList.add("hidden");
 }
 
-/* ========== SWITCH PATH ========== */
-function switchPath(path) {
-    activePath = path;
+/* SWITCH */
+function switchPath(p){
+ activePath=p;
 
-    document.getElementById("tabPrimary").className =
-        path === "primary" ? "tab-active" : "tab-inactive";
+ document.getElementById("tabPrimary").className=
+ p==="primary"?"tab-active p-2 flex-1":"tab-inactive p-2 flex-1";
 
-    document.getElementById("tabAlternative").className =
-        path === "alt" ? "tab-active" : "tab-inactive";
+ document.getElementById("tabAlternative").className=
+ p==="alt"?"tab-active p-2 flex-1":"tab-inactive p-2 flex-1";
 
-    renderContent();
+ renderContent();
 }
 
-/* ========== RENDER ========== */
-function renderContent() {
-    if (!globalData) return;
+/* RENDER */
+function renderContent(){
+ if(!globalData) return;
 
-    const isAr = currentLang === "ar";
-    const current = globalData[activePath];
+ const current=globalData[activePath];
 
-    document.getElementById("resFruit").textContent =
-        isAr ? globalData.fruit_ar : globalData.fruit_en;
+ document.getElementById("resFruit").innerText=
+ globalData.fruit_en || "Fruit";
 
-    document.getElementById("resShelfLife").textContent =
-        "+" + globalData.days + " " + (isAr ? "يوم" : "Days");
+ document.getElementById("resShelfLife").innerText=
+ "+"+globalData.days+" days";
 
-    document.getElementById("labelPrimary").textContent =
-        isAr ? globalData.primary.name_ar : globalData.primary.name_en;
+ const comp=current.components_en||[];
+ document.getElementById("resComponents").innerHTML=
+ comp.map(c=>`<div>${c}</div>`).join("");
 
-    document.getElementById("labelAlt").textContent =
-        isAr ? globalData.alt.name_ar : globalData.alt.name_en;
+ const steps=current.steps_en||[];
+ document.getElementById("resSteps").innerHTML=
+ steps.map((s,i)=>`<div>${i+1}. ${s}</div>`).join("");
 
-    const components = isAr ? current.components_ar : current.components_en;
-
-    document.getElementById("resComponents").innerHTML =
-        components.map(c => `
-        <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border">
-            <span>${c}</span>
-        </div>
-    `).join("");
-
-    const steps = isAr ? current.steps_ar : current.steps_en;
-
-    document.getElementById("resSteps").innerHTML =
-        steps.map((s, i) => `
-        <div class="flex gap-4">
-            <div>${i + 1}</div>
-            <p>${s}</p>
-        </div>
-    `).join("");
-
-    document.getElementById("resRationale").textContent =
-        isAr ? current.rationale_ar : "";
+ document.getElementById("resRationale").innerText=
+ current.rationale_en||"";
 }
 </script>
+
+</body>
+</html>
