@@ -1,192 +1,189 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BioCoat Pro</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioCoat Pro | نظام البدائل المتطور</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<style>
-body { font-family: 'Cairo', sans-serif; }
-.tab-active { background:#10b981;color:white; }
-.tab-inactive { background:white;color:#64748b; }
-.gradient-green { background:linear-gradient(135deg,#065f46,#059669); }
-</style>
+    <style>
+        body { font-family: 'Cairo', sans-serif; scroll-behavior: smooth; }
+        .tab-active { background-color: #10b981 !important; color: white !important; transform: scale(1.05); }
+        .tab-inactive { background-color: white; color: #64748b; }
+        .gradient-green { background: linear-gradient(135deg, #065f46 0%, #059669 100%); }
+    </style>
 </head>
 
-<body class="bg-slate-50">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-<header class="gradient-green text-white p-4 flex justify-between">
-    <h1>BioCoat Pro</h1>
-    <button id="langToggle" onclick="toggleLang()">English</button>
+<header class="gradient-green text-white shadow-xl sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 class="text-xl font-black">BioCoat Pro</h1>
+        <button id="langToggle" onclick="toggleLang()" class="bg-white/10 px-4 py-2 rounded-full">English</button>
+    </div>
 </header>
 
-<main class="p-6 max-w-4xl mx-auto">
+<main class="container mx-auto px-4 py-8 max-w-5xl">
 
-<!-- INPUT -->
-<div id="inputOptions" class="grid gap-4">
-    <button onclick="openCamera()" class="p-4 bg-white rounded-xl shadow">Camera</button>
+    <div id="inputOptions" class="grid md:grid-cols-2 gap-4">
+        <button onclick="openCamera()" class="bg-white p-6 rounded-2xl shadow">📷 Camera</button>
 
-    <label class="p-4 bg-white rounded-xl shadow cursor-pointer">
-        Upload Image
-        <input type="file" id="fileUpload" hidden>
-    </label>
-</div>
+        <label class="bg-white p-6 rounded-2xl shadow cursor-pointer">
+            📤 Upload
+            <input type="file" id="fileUpload" class="hidden" accept="image/*">
+        </label>
+    </div>
 
-<!-- PREVIEW -->
-<div id="previewContainer" class="hidden mt-6">
-    <img id="previewImg" class="w-full rounded-xl mb-4">
-    <button onclick="processImage()" class="p-4 bg-green-600 text-white rounded-xl w-full">
-        Analyze
-    </button>
-</div>
+    <div id="previewContainer" class="hidden mt-6">
+        <img id="previewImg" class="w-full h-72 object-contain bg-white rounded-xl">
+        <button onclick="processImage()" class="w-full mt-4 gradient-green text-white p-4 rounded-xl">
+            Analyze
+        </button>
+    </div>
 
-<!-- RESULTS -->
-<div id="resultsContainer" class="hidden mt-6">
+    <div id="resultsContainer" class="hidden mt-6">
+        <h2 id="resFruit"></h2>
+        <p id="resShelfLife"></p>
 
-<h2 id="resFruit"></h2>
-<p id="resShelfLife"></p>
-
-<div class="flex gap-2 mt-4">
-<button id="tabPrimary" onclick="switchPath('primary')" class="tab-active p-2 flex-1">Primary</button>
-<button id="tabAlternative" onclick="switchPath('alt')" class="tab-inactive p-2 flex-1">Alt</button>
-</div>
-
-<div id="resComponents" class="mt-4"></div>
-<div id="resSteps" class="mt-4"></div>
-<p id="resRationale" class="mt-4"></p>
-
-</div>
+        <div id="resComponents"></div>
+        <div id="resSteps"></div>
+    </div>
 
 </main>
-
-<div id="loader" class="hidden fixed inset-0 bg-black/60 text-white flex items-center justify-center">
-Loading...
-</div>
 
 <canvas id="cameraCanvas" class="hidden"></canvas>
 <video id="cameraVideo" class="hidden"></video>
 
+<div id="loader" class="hidden fixed inset-0 bg-black/70 text-white flex items-center justify-center">
+    Loading...
+</div>
+
 <script>
 const i18n = {
- ar:{camBtn:"Camera"},
- en:{camBtn:"Camera"}
+    ar: { days: "يوم إضافي" },
+    en: { days: "Days" }
 };
 
-let currentLang="ar";
-let currentImg=null;
-let globalData=null;
-let activePath="primary";
+let currentLang = 'ar';
+let currentImg = null;
+let globalData = null;
+let activePath = 'primary';
 
-/* LANGUAGE */
-function toggleLang(){
- currentLang=currentLang==="ar"?"en":"ar";
- document.getElementById("langToggle").innerText=
- currentLang==="ar"?"English":"عربي";
+function toggleLang() {
+    currentLang = currentLang === 'ar' ? 'en' : 'ar';
+    document.getElementById('langToggle').textContent =
+        currentLang === 'ar' ? 'English' : 'عربي';
 }
 
 /* CAMERA */
-async function openCamera(){
- try{
- const stream=await navigator.mediaDevices.getUserMedia({video:true});
- const v=document.getElementById("cameraVideo");
- v.srcObject=stream;
- v.play();
- window.stream=stream;
- alert("Camera opened (capture via hidden function)");
- }catch(e){alert("camera error");}
+async function openCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    document.getElementById('cameraVideo').srcObject = stream;
+    window.localStream = stream;
 }
 
 /* FILE */
-document.getElementById("fileUpload").onchange=(e)=>{
- const r=new FileReader();
- r.onload=(ev)=>{
- currentImg=ev.target.result.split(",")[1];
- document.getElementById("previewImg").src=ev.target.result;
- document.getElementById("inputOptions").classList.add("hidden");
- document.getElementById("previewContainer").classList.remove("hidden");
- };
- r.readAsDataURL(e.target.files[0]);
+document.getElementById('fileUpload').onchange = e => {
+    const r = new FileReader();
+    r.onload = ev => {
+        currentImg = ev.target.result.split(',')[1];
+        document.getElementById('previewImg').src = ev.target.result;
+
+        document.getElementById('inputOptions').classList.add('hidden');
+        document.getElementById('previewContainer').classList.remove('hidden');
+    };
+    r.readAsDataURL(e.target.files[0]);
 };
 
-/* PROCESS */
-async function processImage(){
- document.getElementById("loader").classList.remove("hidden");
+/* PROCESS IMAGE */
+async function processImage() {
+    document.getElementById('loader').classList.remove('hidden');
 
- const apiKey="";
+    const apiKey = "AIzaSyBtbBIS_cFvlfWcLlAvfd79v9jFZWDqd6w";
 
- const prompt="Return JSON with fruit + 2 coatings";
-
- try{
- const resp=await fetch(
- `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
- {
- method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({
- contents:[{
- parts:[
- {text:prompt},
- {inlineData:{mimeType:"image/jpeg",data:currentImg}}
- ]
- }]
- })
+    const prompt = `
+Return JSON ONLY:
+{
+ "fruit_ar": "",
+ "fruit_en": "",
+ "days": 0,
+ "primary": {
+   "name_ar": "",
+   "name_en": "",
+   "components_ar": [],
+   "steps_ar": [],
+   "rationale_ar": ""
+ },
+ "alt": {
+   "name_ar": "",
+   "name_en": "",
+   "components_ar": [],
+   "steps_ar": [],
+   "rationale_ar": ""
  }
- );
+}`;
 
- const res=await resp.json();
- globalData=JSON.parse(res.candidates[0].content.parts[0].text);
+    try {
+        const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: "image/jpeg", data: currentImg } }
+                        ]
+                    }]
+                })
+            }
+        );
 
- renderContent();
+        const res = await resp.json();
 
- document.getElementById("previewContainer").classList.add("hidden");
- document.getElementById("resultsContainer").classList.remove("hidden");
+        globalData = JSON.parse(res.candidates[0].content.parts[0].text);
+        activePath = 'primary';
 
- }catch(e){
- alert("Error in analysis");
- }
+        renderContent();
 
- document.getElementById("loader").classList.add("hidden");
-}
+        document.getElementById('previewContainer').classList.add('hidden');
+        document.getElementById('resultsContainer').classList.remove('hidden');
 
-/* SWITCH */
-function switchPath(p){
- activePath=p;
+    } catch (e) {
+        alert("Error in analysis");
+        console.log(e);
+    }
 
- document.getElementById("tabPrimary").className=
- p==="primary"?"tab-active p-2 flex-1":"tab-inactive p-2 flex-1";
-
- document.getElementById("tabAlternative").className=
- p==="alt"?"tab-active p-2 flex-1":"tab-inactive p-2 flex-1";
-
- renderContent();
+    document.getElementById('loader').classList.add('hidden');
 }
 
 /* RENDER */
-function renderContent(){
- if(!globalData) return;
+function renderContent() {
+    if (!globalData) return;
 
- const current=globalData[activePath];
+    document.getElementById('resFruit').textContent =
+        globalData.fruit_ar;
 
- document.getElementById("resFruit").innerText=
- globalData.fruit_en || "Fruit";
+    document.getElementById('resShelfLife').textContent =
+        "+" + globalData.days + " " + i18n[currentLang].days;
 
- document.getElementById("resShelfLife").innerText=
- "+"+globalData.days+" days";
+    const current = activePath === 'primary'
+        ? globalData.primary
+        : globalData.alt;
 
- const comp=current.components_en||[];
- document.getElementById("resComponents").innerHTML=
- comp.map(c=>`<div>${c}</div>`).join("");
+    document.getElementById('resComponents').innerHTML =
+        current.components_ar.map(c =>
+            `<div>${c}</div>`
+        ).join('');
 
- const steps=current.steps_en||[];
- document.getElementById("resSteps").innerHTML=
- steps.map((s,i)=>`<div>${i+1}. ${s}</div>`).join("");
-
- document.getElementById("resRationale").innerText=
- current.rationale_en||"";
+    document.getElementById('resSteps').innerHTML =
+        current.steps_ar.map((s, i) =>
+            `<p>${i+1}. ${s}</p>`
+        ).join('');
 }
 </script>
 
