@@ -136,178 +136,174 @@
     </div>
 
     <script>
-        const i18n = {
-            ar: {
-                title: "نظام مقارنة البدائل الحيوية", subtitle: "حلل ثمارك واحصل على مسارين مختلفين للحفظ مع كامل التفاصيل لكل مادة.",
-                camBtn: "التحليل البصري", uploadBtn: "رفع صورة العينة", analyzeBtn: "توليد المسارين (أساسي + بديل)",
-                detected: "العينة المكتشفة", shelfLife: "إطالة العمر الافتراضي", componentsTitle: "المكونات والتركيزات الدقيقة",
-                stepsTitle: "بروتوكول التحضير الخاص", devLabel: "المطور الرئيسي للنظام", loading: "جاري مقارنة المسارات العلمية...",
-                days: "يوم إضافي"
-            },
-            en: {
-                title: "Bio-Alternative System", subtitle: "Analyze your fruits and get two distinct preservation paths with full details.",
-                camBtn: "Visual Analysis", uploadBtn: "Upload Sample", analyzeBtn: "Generate Dual Paths (Primary + Alt)",
-                detected: "Detected Sample", shelfLife: "Shelf Life Extension", componentsTitle: "Ingredients & Exact Concentrations",
-                stepsTitle: "Specific Preparation Protocol", devLabel: "Chief System Developer", loading: "Comparing scientific paths...",
-                days: "Extra Days"
-            }
-        };
-
-        let currentLang = 'ar';
-        let currentImg = null;
-        let globalData = null; // Stores both paths
-        let activePath = 'primary'; // 'primary' or 'alt'
-
-        function toggleLang() {
-            currentLang = currentLang === 'ar' ? 'en' : 'ar';
-            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-            document.getElementById('langToggle').textContent = currentLang === 'ar' ? 'English' : 'عربي';
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                el.textContent = i18n[currentLang][el.getAttribute('data-i18n')];
-            });
-            if(globalData) renderContent();
+    const i18n = {
+        ar: {
+            title: "نظام مقارنة البدائل الحيوية", subtitle: "حلل ثمارك واحصل على مسارين مختلفين للحفظ مع كامل التفاصيل لكل مادة.",
+            camBtn: "التحليل البصري", uploadBtn: "رفع صورة العينة", analyzeBtn: "توليد المسارين (أساسي + بديل)",
+            detected: "العينة المكتشفة", shelfLife: "إطالة العمر الافتراضي", componentsTitle: "المكونات والتركيزات الدقيقة",
+            stepsTitle: "بروتوكول التحضير الخاص", devLabel: "المطور الرئيسي للنظام", loading: "جاري مقارنة المسارات العلمية...",
+            days: "يوم إضافي"
+        },
+        en: {
+            title: "Bio-Alternative System", subtitle: "Analyze your fruits and get two distinct preservation paths with full details.",
+            camBtn: "Visual Analysis", uploadBtn: "Upload Sample", analyzeBtn: "Generate Dual Paths (Primary + Alt)",
+            detected: "Detected Sample", shelfLife: "Shelf Life Extension", componentsTitle: "Ingredients & Exact Concentrations",
+            stepsTitle: "Specific Preparation Protocol", devLabel: "Chief System Developer", loading: "Comparing scientific paths...",
+            days: "Extra Days"
         }
+    };
 
-        async function openCamera() {
-            try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                document.getElementById('cameraVideo').srcObject = s;
-                window.localStream = s;
-                document.getElementById('inputOptions').classList.add('hidden');
-                document.getElementById('cameraContainer').classList.remove('hidden');
-            } catch(e) { alert("Camera error"); }
+    let currentLang = 'ar';
+    let currentImg = null;
+    let globalData = null;
+    let activePath = 'primary';
+
+    function toggleLang() {
+        currentLang = currentLang === 'ar' ? 'en' : 'ar';
+        document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+        document.getElementById('langToggle').textContent = currentLang === 'ar' ? 'English' : 'عربي';
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            el.textContent = i18n[currentLang][el.getAttribute('data-i18n')];
+        });
+
+        if (globalData) renderContent();
+    }
+
+    async function openCamera() {
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            document.getElementById('cameraVideo').srcObject = s;
+            window.localStream = s;
+
+            document.getElementById('inputOptions').classList.add('hidden');
+            document.getElementById('cameraContainer').classList.remove('hidden');
+        } catch (e) {
+            alert("Camera error");
         }
+    }
 
-        function capturePhoto() {
-            const v = document.getElementById('cameraVideo');
-            const c = document.getElementById('cameraCanvas');
-            c.width = v.videoWidth; c.height = v.videoHeight;
-            c.getContext('2d').drawImage(v, 0, 0);
-            const url = c.toDataURL('image/jpeg');
-            currentImg = url.split(',')[1];
-            document.getElementById('previewImg').src = url;
-            if(window.localStream) window.localStream.getTracks().forEach(t => t.stop());
-            document.getElementById('cameraContainer').classList.add('hidden');
+    function capturePhoto() {
+        const v = document.getElementById('cameraVideo');
+        const c = document.getElementById('cameraCanvas');
+
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+
+        c.getContext('2d').drawImage(v, 0, 0);
+
+        const url = c.toDataURL('image/jpeg');
+        currentImg = url.split(',')[1];
+
+        document.getElementById('previewImg').src = url;
+
+        if (window.localStream) window.localStream.getTracks().forEach(t => t.stop());
+
+        document.getElementById('cameraContainer').classList.add('hidden');
+        document.getElementById('previewContainer').classList.remove('hidden');
+    }
+
+    document.getElementById('fileUpload').onchange = e => {
+        const r = new FileReader();
+
+        r.onload = ev => {
+            currentImg = ev.target.result.split(',')[1];
+            document.getElementById('previewImg').src = ev.target.result;
+
+            document.getElementById('inputOptions').classList.add('hidden');
             document.getElementById('previewContainer').classList.remove('hidden');
-        }
-
-        document.getElementById('fileUpload').onchange = e => {
-            const r = new FileReader();
-            r.onload = ev => {
-                currentImg = ev.target.result.split(',')[1];
-                document.getElementById('previewImg').src = ev.target.result;
-                document.getElementById('inputOptions').classList.add('hidden');
-                document.getElementById('previewContainer').classList.remove('hidden');
-            };
-            r.readAsDataURL(e.target.files[0]);
         };
 
-        function resetInput() {
-            document.getElementById('previewContainer').classList.add('hidden');
-            document.getElementById('resultsContainer').classList.add('hidden');
-            document.getElementById('inputOptions').classList.remove('hidden');
-        }
+        r.readAsDataURL(e.target.files[0]);
+    };
 
-        async function processImage() {
-            document.getElementById('loader').classList.remove('hidden');
-            const apiKey = ""; // ضع مفتاحك هنا
-            
-            const prompt = `Identify fruit. Provide TWO distinct edible coating formulations: one Primary and one Alternative. 
-            DON'T overuse Sodium Alginate. Use science-based choices like Chitosan, Guar Gum, CMC, or Pectin.
-            JSON structure:
-            {
-                "fruit_ar": "", "fruit_en": "",
-                "days": 0,
-                "primary": {
-                    "name_ar": "", "name_en": "",
-                    "components_ar": [], "components_en": [],
-                    "steps_ar": [], "steps_en": [],
-                    "rationale_ar": ""
+    async function processImage() {
+        document.getElementById('loader').classList.remove('hidden');
+
+        const prompt = `Identify fruit. Provide TWO distinct edible coating formulations: one Primary and one Alternative.`;
+
+        try {
+            const resp = await fetch("/api/analyze", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
                 },
-                "alt": {
-                    "name_ar": "", "name_en": "",
-                    "components_ar": [], "components_en": [],
-                    "steps_ar": [], "steps_en": [],
-                    "rationale_ar": ""
-                }
-            }`;
+                body: JSON.stringify({
+                    image: currentImg,
+                    prompt: prompt
+                })
+            });
 
-            try {
-                const resp = await fetch("/api/analyze", {
-  method: "POST",
-  headers: {
-    const resp = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: currentImg
-              }
-            }
-          ]
-        }
-      ]
-    })
-  }
-);
+            const res = await resp.json();
 
-const res = await resp.json();
-globalData = JSON.parse(res.candidates[0].content.parts[0].text);
-activePath = 'primary';
-                renderContent();
-                document.getElementById('previewContainer').classList.add('hidden');
-                document.getElementById('resultsContainer').classList.remove('hidden');
-            } catch(e) { alert("Analysis error"); }
-            document.getElementById('loader').classList.add('hidden');
-        }
+            globalData = JSON.parse(res.candidates[0].content.parts[0].text);
+            activePath = 'primary';
 
-        function switchPath(path) {
-            activePath = path;
-            document.getElementById('tabPrimary').className = path === 'primary' ? 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-active' : 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-inactive';
-            document.getElementById('tabAlternative').className = path === 'alt' ? 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-active' : 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-inactive';
             renderContent();
+
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('resultsContainer').classList.remove('hidden');
+
+        } catch (e) {
+            alert("Analysis error");
         }
 
-        function renderContent() {
-            if(!globalData) return;
-            const isAr = currentLang === 'ar';
-            document.getElementById('resFruit').textContent = isAr ? globalData.fruit_ar : globalData.fruit_en;
-            document.getElementById('resShelfLife').textContent = "+" + globalData.days + " " + (isAr ? "يوم" : "Days");
-            
-            document.getElementById('labelPrimary').textContent = isAr ? globalData.primary.name_ar : globalData.primary.name_en;
-            document.getElementById('labelAlt').textContent = isAr ? globalData.alt.name_ar : globalData.alt.name_en;
+        document.getElementById('loader').classList.add('hidden');
+    }
 
-            const current = activePath === 'primary' ? globalData.primary : globalData.alt;
-            
-            const components = isAr ? current.components_ar : current.components_en;
-            document.getElementById('resComponents').innerHTML = components.map(c => `
-                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <span class="font-bold text-slate-700">${c}</span>
-                    <i class="fa-solid fa-check-circle text-emerald-500"></i>
-                </div>
-            `).join('');
+    function switchPath(path) {
+        activePath = path;
 
-            const steps = isAr ? current.steps_ar : current.steps_en;
-            document.getElementById('resSteps').innerHTML = steps.map((s, i) => `
-                <div class="flex gap-4 items-start">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 font-black flex items-center justify-center shrink-0 text-xs">${i+1}</div>
-                    <p class="text-slate-300 text-sm leading-relaxed">${s}</p>
-                </div>
-            `).join('');
+        document.getElementById('tabPrimary').className =
+            path === 'primary' ? 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-active'
+                : 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-inactive';
 
-            document.getElementById('resRationale').textContent = isAr ? current.rationale_ar : "Switch language to see English rationale";
-        }
-    </script>
+        document.getElementById('tabAlternative').className =
+            path === 'alt' ? 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-active'
+                : 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-inactive';
+
+        renderContent();
+    }
+
+    function renderContent() {
+        if (!globalData) return;
+
+        const isAr = currentLang === 'ar';
+
+        document.getElementById('resFruit').textContent =
+            isAr ? globalData.fruit_ar : globalData.fruit_en;
+
+        document.getElementById('resShelfLife').textContent =
+            "+" + globalData.days + " " + (isAr ? "يوم" : "Days");
+
+        document.getElementById('labelPrimary').textContent =
+            isAr ? globalData.primary.name_ar : globalData.primary.name_en;
+
+        document.getElementById('labelAlt').textContent =
+            isAr ? globalData.alt.name_ar : globalData.alt.name_en;
+
+        const current = activePath === 'primary' ? globalData.primary : globalData.alt;
+
+        const components = isAr ? current.components_ar : current.components_en;
+        document.getElementById('resComponents').innerHTML = components.map(c => `
+            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span class="font-bold text-slate-700">${c}</span>
+                <i class="fa-solid fa-check-circle text-emerald-500"></i>
+            </div>
+        `).join('');
+
+        const steps = isAr ? current.steps_ar : current.steps_en;
+        document.getElementById('resSteps').innerHTML = steps.map((s, i) => `
+            <div class="flex gap-4 items-start">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 font-black flex items-center justify-center shrink-0 text-xs">${i + 1}</div>
+                <p class="text-slate-300 text-sm leading-relaxed">${s}</p>
+            </div>
+        `).join('');
+
+        document.getElementById('resRationale').textContent =
+            isAr ? current.rationale_ar : "";
+    }
+</script>
 </body>
 </html>
 
