@@ -30,173 +30,186 @@ const i18n = {
     }
 };
 
-let currentLang = 'ar';
+let currentLang = "ar";
 let currentImg = null;
 let globalData = null;
-let activePath = 'primary';
+let activePath = "primary";
 
-/* LANGUAGE TOGGLE */
+/* ========== LANGUAGE ========== */
 function toggleLang() {
-    currentLang = currentLang === 'ar' ? 'en' : 'ar';
-    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-    document.getElementById('langToggle').textContent =
-        currentLang === 'ar' ? 'English' : 'عربي';
+    currentLang = currentLang === "ar" ? "en" : "ar";
+    document.documentElement.dir = currentLang === "ar" ? "rtl" : "ltr";
 
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        el.textContent = i18n[currentLang][el.getAttribute('data-i18n')];
+    document.getElementById("langToggle").textContent =
+        currentLang === "ar" ? "English" : "عربي";
+
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+        el.textContent = i18n[currentLang][el.getAttribute("data-i18n")];
     });
 
     if (globalData) renderContent();
 }
 
-/* CAMERA */
+/* ========== CAMERA ========== */
 async function openCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }
+            video: { facingMode: "environment" }
         });
 
-        document.getElementById('cameraVideo').srcObject = stream;
+        document.getElementById("cameraVideo").srcObject = stream;
         window.localStream = stream;
 
-        document.getElementById('inputOptions').classList.add('hidden');
-        document.getElementById('cameraContainer').classList.remove('hidden');
+        document.getElementById("inputOptions").classList.add("hidden");
+        document.getElementById("cameraContainer").classList.remove("hidden");
 
     } catch (e) {
         alert("Camera error");
     }
 }
 
-/* CAPTURE */
+/* ========== CAPTURE ========== */
 function capturePhoto() {
-    const v = document.getElementById('cameraVideo');
-    const c = document.getElementById('cameraCanvas');
+    const video = document.getElementById("cameraVideo");
+    const canvas = document.getElementById("cameraCanvas");
 
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    const url = c.toDataURL('image/jpeg');
-    currentImg = url.split(',')[1];
+    canvas.getContext("2d").drawImage(video, 0, 0);
 
-    document.getElementById('previewImg').src = url;
+    const url = canvas.toDataURL("image/jpeg");
+    currentImg = url.split(",")[1];
+
+    document.getElementById("previewImg").src = url;
 
     if (window.localStream) {
         window.localStream.getTracks().forEach(t => t.stop());
     }
 
-    document.getElementById('cameraContainer').classList.add('hidden');
-    document.getElementById('previewContainer').classList.remove('hidden');
+    document.getElementById("cameraContainer").classList.add("hidden");
+    document.getElementById("previewContainer").classList.remove("hidden");
 }
 
-/* FILE UPLOAD */
-document.getElementById('fileUpload').onchange = e => {
-    const r = new FileReader();
+/* ========== FILE UPLOAD ========== */
+document.getElementById("fileUpload").onchange = e => {
+    const reader = new FileReader();
 
-    r.onload = ev => {
-        currentImg = ev.target.result.split(',')[1];
-        document.getElementById('previewImg').src = ev.target.result;
+    reader.onload = ev => {
+        currentImg = ev.target.result.split(",")[1];
+        document.getElementById("previewImg").src = ev.target.result;
 
-        document.getElementById('inputOptions').classList.add('hidden');
-        document.getElementById('previewContainer').classList.remove('hidden');
+        document.getElementById("inputOptions").classList.add("hidden");
+        document.getElementById("previewContainer").classList.remove("hidden");
     };
 
-    r.readAsDataURL(e.target.files[0]);
+    reader.readAsDataURL(e.target.files[0]);
 };
 
-/* PROCESS IMAGE */
+/* ========== PROCESS IMAGE ========== */
 async function processImage() {
-    document.getElementById('loader').classList.remove('hidden');
+    document.getElementById("loader").classList.remove("hidden");
 
-    const apiKey = ""; // حطي المفتاح في Vercel
+    const apiKey = ""; // حطي API KEY هنا
 
-    const prompt = `Identify fruit and return TWO coating formulations (Primary & Alternative).`;
+    const prompt = `
+Identify fruit and return JSON with TWO coating formulas:
+Primary and Alternative.
+`;
 
     try {
-        const resp = await fetch("/api/analyze", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                image: currentImg,
-                prompt: prompt
-            })
-        });
+        const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            {
+                                inlineData: {
+                                    mimeType: "image/jpeg",
+                                    data: currentImg
+                                }
+                            }
+                        ]
+                    }]
+                })
+            }
+        );
 
         const res = await resp.json();
-
         globalData = JSON.parse(res.candidates[0].content.parts[0].text);
-        activePath = 'primary';
+
+        activePath = "primary";
 
         renderContent();
 
-        document.getElementById('previewContainer').classList.add('hidden');
-        document.getElementById('resultsContainer').classList.remove('hidden');
+        document.getElementById("previewContainer").classList.add("hidden");
+        document.getElementById("resultsContainer").classList.remove("hidden");
 
     } catch (e) {
         alert("Analysis error");
     }
 
-    document.getElementById('loader').classList.add('hidden');
+    document.getElementById("loader").classList.add("hidden");
 }
 
-/* SWITCH PATH */
+/* ========== SWITCH PATH ========== */
 function switchPath(path) {
     activePath = path;
 
-    document.getElementById('tabPrimary').className =
-        path === 'primary'
-            ? 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-active'
-            : 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-inactive';
+    document.getElementById("tabPrimary").className =
+        path === "primary" ? "tab-active" : "tab-inactive";
 
-    document.getElementById('tabAlternative').className =
-        path === 'alt'
-            ? 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-active'
-            : 'flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all tab-inactive';
+    document.getElementById("tabAlternative").className =
+        path === "alt" ? "tab-active" : "tab-inactive";
 
     renderContent();
 }
 
-/* RENDER */
+/* ========== RENDER ========== */
 function renderContent() {
     if (!globalData) return;
 
-    const isAr = currentLang === 'ar';
-    const current = activePath === 'primary' ? globalData.primary : globalData.alt;
+    const isAr = currentLang === "ar";
+    const current = globalData[activePath];
 
-    document.getElementById('resFruit').textContent =
+    document.getElementById("resFruit").textContent =
         isAr ? globalData.fruit_ar : globalData.fruit_en;
 
-    document.getElementById('resShelfLife').textContent =
+    document.getElementById("resShelfLife").textContent =
         "+" + globalData.days + " " + (isAr ? "يوم" : "Days");
 
-    document.getElementById('labelPrimary').textContent =
+    document.getElementById("labelPrimary").textContent =
         isAr ? globalData.primary.name_ar : globalData.primary.name_en;
 
-    document.getElementById('labelAlt').textContent =
+    document.getElementById("labelAlt").textContent =
         isAr ? globalData.alt.name_ar : globalData.alt.name_en;
 
     const components = isAr ? current.components_ar : current.components_en;
 
-    document.getElementById('resComponents').innerHTML =
+    document.getElementById("resComponents").innerHTML =
         components.map(c => `
         <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border">
             <span>${c}</span>
         </div>
-    `).join('');
+    `).join("");
 
     const steps = isAr ? current.steps_ar : current.steps_en;
 
-    document.getElementById('resSteps').innerHTML =
+    document.getElementById("resSteps").innerHTML =
         steps.map((s, i) => `
         <div class="flex gap-4">
             <div>${i + 1}</div>
             <p>${s}</p>
         </div>
-    `).join('');
+    `).join("");
 
-    document.getElementById('resRationale').textContent =
+    document.getElementById("resRationale").textContent =
         isAr ? current.rationale_ar : "";
 }
 </script>
